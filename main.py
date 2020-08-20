@@ -152,7 +152,6 @@ if __name__ == "__main__":
     sounds['die'] = pygame.mixer.Sound('audio/die.wav')
     sounds['hit'] = pygame.mixer.Sound('audio/hit.wav')
     sounds['point'] = pygame.mixer.Sound('audio/point.wav')
-    sounds['swoosh'] = pygame.mixer.Sound('audio/swoosh.wav')
     sounds['wing'] = pygame.mixer.Sound('audio/wing.wav')
     while True:
         welcomescreen() 
