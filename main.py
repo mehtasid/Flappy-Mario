@@ -1,158 +1,140 @@
-import random 
-import sys 
-import pygame
-from pygame.locals import * 
+import pygame, sys, random
+from pygame.locals import*
 
-FPS = 32
-width = 1080
-height = 1920
-screen = pygame.display.set_mode((width, height))
-gy = height * 0.8
-sprites = {}
-sounds = {}
-player = 'sprites/mario.png'
-background = 'sprites/background.png'
-pipe1 = 'sprites/balloon1.png'
-pipe2 = 'sprites/balloon2.png'
+fps= 100
+screen= pygame.display.set_mode((1700, 1000))
+sprites, sounds, b= {}, {}, 0
+player, background= 'Flappy Bird/aeroplane.png', 'Flappy Bird/background.jpg'
+pipe, base= 'Flappy Bird/tower.jpg', 'Flappy Bird/ground.png'
 
-def welcomescreen():
-    playerx = int(width/5)
-    playery = int((height - sprites['player'].get_height())/2)
-    messagex = int((width - sprites['message'].get_width())/2)
-    messagey = int(height*0.13)
+def create_pipe():
+    random_pipe_pos = random.randrange(305, 600)
+    bottom_pipe = sprites['pipe'].get_rect(midtop = (1700,random_pipe_pos))
+    top_pipe = sprites['pipe'].get_rect(midbottom = (1700,random_pipe_pos - 300))
+    return bottom_pipe,top_pipe
+
+
+def move_pipes(pipes):
+    for pipe in pipes:
+        pipe.centerx-=3
+    return pipes
+
+def draw_pipes(pipes):
+    for pipe in pipes:
+        if pipe.bottom>=900:
+            screen.blit(sprites['pipe'],pipe)
+        else:
+            screen.blit((pygame.transform.flip(sprites['pipe'],False,True)), pipe)
+
+def check_collision(pipes):
+    for pipe in pipes:
+        if pr.colliderect(pipe):
+            sounds['out'].play()
+            return False
+    if pr.top <= -5 or pr.bottom >= 900:
+        return False
+
+    return True                    
+
+def welcomeScreen():
+    bx=0
+    sounds['intro'].play(-1)
     while True:
         for event in pygame.event.get():
-            if event.type == QUIT or (event.type==KEYDOWN and event.key == K_ESCAPE):
-                pygame.quit()
+            if event.type== QUIT or (event.type==KEYDOWN and event.key== K_ESCAPE):
+                pygame.exit()
                 sys.exit()
-            elif event.type==KEYDOWN and (event.key==K_SPACE or event.key == K_UP):
+            elif event.type== KEYDOWN and (event.key== K_SPACE or event.key== K_UP):
                 return
-            else:
-                screen.blit(sprites['background'], (0, 0))    
-                screen.blit(sprites['player'], (playerx, playery))    
-                screen.blit(sprites['message'], (messagex,messagey ))    
-                pygame.display.update()
-                FPSCLOCK.tick(FPS)
+              
+        screen.blit(sprites['background'],(0,0))
+        screen.blit(sprites['player'],(0,350))
+        screen.blit(sprites['base'],(bx,800))
+        screen.blit(sprites['base'],(bx+1700,800))
+        bx-=1
+        if bx<=-1700:
+            bx=0
+        pygame.display.update()
+        fpsclock.tick(fps)
 
 def mainGame():
-    score = 0
-    playerx = int(width/5)
-    playery = int(width/2)
-    newpipe1 = getRandompipe()
-    newpipe2 = getRandompipe()
-    upperpipes = [
-        {'x': width+200, 'y':newpipe1[0]['y']},
-        {'x': width+200+(width/2), 'y':newpipe2[0]['y']},
-    ]
-    lowerpipes = [
-        {'x': width+200, 'y':newpipe1[1]['y']},
-        {'x': width+200+(width/2), 'y':newpipe2[1]['y']},
-    ]
-
-    pipeVelX = -4
-
-    playerVelY = -9
-    playerMaxVelY = 10
-    playerMinVelY = -8
-    playerAccY = 1
-
-    playerFlapAccv = -8 
-    playerFlapped = False 
-
+    pr= sprites['player'].get_rect(topleft=(0,350))
+    pipelist=[]
+    SP=pygame.USEREVENT
+    pygame.time.set_timer(SP, 1200)
+    bx, b, g, score=0, 0, 0.50, 0
+    game_active=True
 
     while True:
+        sounds['intro'].stop()
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                 pygame.quit()
                 sys.exit()
-            if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-                if playery > 0:
-                    playerVelY = playerFlapAccv
-                    playerFlapped = True
-                    sounds['wing'].play()
+            if event.type == KEYDOWN:
+                if (event.key == K_SPACE or event.key == K_UP) and game_active:
+                    b=0
+                    b-=10
+                    sounds['flap'].play()
+                if  (event.key == K_SPACE or event.key == K_UP) and game_active == False:
+                    pipelist.clear()
+                    pr.topleft = (0,350)
+                    score = 0 
 
+            if event.type == SP:
+                pipelist.extend(create_pipe())
+                #print(pipelist)
 
-        crashTest = isCollide(playerx, playery, upperpipes, lowerpipes) 
-        if crashTest:
-            return     
-        playerMidPos = playerx + sprites['player'].get_width()/2
-        for pipe in upperpipes:
-            pipeMidPos = pipe['x'] + sprites['pipe1'].get_width()/2
-            if pipeMidPos<= playerMidPos < pipeMidPos +4:
-                score +=1
-                print(f"Your score is {score}") 
-                sounds['point'].play()
+        screen.blit(sprites['background'],(0,0))
 
+        if game_active:
+            # Bird
+            b+= g
+            pr.centery += b
+            screen.blit(sprites['player'],pr)
+            game_active = check_collision(pipelist)
 
-        if playerVelY <playerMaxVelY and not playerFlapped:
-            playerVelY += playerAccY
+            # Pipes
+            pipelist = move_pipes(pipelist)
+            draw_pipes(pipelist)
+            score += 0.01
+            # score_display('main_game')
+            # score_sound_countdown -= 1
+            # if score_sound_countdown <= 0:
+            #     score_sound.play()
+            #     score_sound_countdown = 100
+        # else:
+        #     screen.blit(game_over_surface,game_over_rect)
+        #     high_score = update_score(score,high_score)
+        #     score_display('game_over')
 
-        if playerFlapped:
-            playerFlapped = False            
-        playerHeight = sprites['player'].get_height()
-        playery = playery + min(playerVelY, gy - playery - playerHeight)
-        for upperpipe , lowerpipe in zip(upperpipes, lowerpipes):
-            upperpipe['x'] += pipeVelX
-            lowerpipe['x'] += pipeVelX
-        if 0<upperpipes[0]['x']<5:
-            newpipe = getRandompipe()
-            upperpipes.append(newpipe[0])
-            lowerpipes.append(newpipe[1])
-        if upperpipes[0]['x'] < -sprites['pipe1'].get_width():
-            upperpipes.pop(0)
-            lowerpipes.pop(0)
-        screen.blit(sprites['background'], (0, 0))
-        for upperpipe, lowerpipe in zip(upperpipes, lowerpipes):
-            screen.blit(sprites['pipe1'], (upperpipe['x'], upperpipe['y']))
-            screen.blit(sprites['pipe2'], (lowerpipe['x'], lowerpipe['y']))
-        screen.blit(sprites['player'], (playerx, playery))
+        pipelist= move_pipes(pipelist)
+        draw_pipes(pipelist)
+        screen.blit(sprites['base'],(bx,800))
+        screen.blit(sprites['base'],(bx+1700,800)) 
+        bx-=1 
+        if bx<=-1700:
+            bx=0
         pygame.display.update()
-        FPSCLOCK.tick(FPS)
-
-def isCollide(playerx, playery, upperpipes, lowerpipes):
-    if playery> gy - 25  or playery<0:
-        sounds['hit'].play()
-        return True
+        fpsclock.tick(fps)            
     
-    for pipe in upperpipes:
-        pipeHeight = sprites['pipe1'].get_height()
-        if(playery < pipeHeight + pipe['y'] and abs(playerx - pipe['x']) < sprites['pipe1'].get_width()):
-            sounds['hit'].play()
-            return True
-
-    for pipe in lowerpipes:
-        if (playery + sprites['player'].get_height() > pipe['y']) and abs(playerx - pipe['x']) < sprites['pipe1'].get_width():
-            sounds['hit'].play()
-            return True
-
-    return False
-
-def getRandompipe():
-    pipeHeight = sprites['pipe1'].get_height()
-    offset = height/3
-    y2 = offset + random.randrange(0, int(height - 1.2 *offset))
-    pipeX = width + 10
-    y1 = pipeHeight - y2 + offset
-    pipe = [
-        {'x': pipeX, 'y': -y1},
-        {'x': pipeX, 'y': y2} 
-    ]
-    return pipe
-
 if __name__ == "__main__":
-    pygame.init() 
-    FPSCLOCK = pygame.time.Clock()
-    pygame.display.set_caption('Flappy Mario by Siddharth')
-    sprites['message'] =pygame.image.load('sprites/message.png').convert_alpha()
-    sprites['pipe'] =(pygame.transform.rotate(pygame.image.load(pipe1).convert_alpha(), 180), 
-    pygame.image.load(pipe2).convert_alpha()
-    )
-    sprites['background'] = pygame.image.load(background).convert()
-    sprites['player'] = pygame.image.load(player).convert_alpha()
-    sounds['die'] = pygame.mixer.Sound('audio/die.wav')
-    sounds['hit'] = pygame.mixer.Sound('audio/hit.wav')
-    sounds['point'] = pygame.mixer.Sound('audio/point.wav')
-    sounds['wing'] = pygame.mixer.Sound('audio/wing.wav')
+    pygame.init()
+    fpsclock= pygame.time.Clock()
+    pygame.display.set_caption('Flappy Jihad')
+    sprites['pipe']= pygame.transform.scale(pygame.image.load(pipe).convert_alpha(), (150,600))
+    sprites['background']= pygame.transform.scale(pygame.image.load(background).convert_alpha(), (1700,900))
+    sprites['player']= pygame.transform.scale(pygame.image.load(player).convert_alpha(), (300,100))
+    sprites['base']=pygame.transform.scale(pygame.image.load(base).convert_alpha(),(1700,112))
+    sounds['intro']= pygame.mixer.Sound('Sounds/bomb.wav')
+    sounds['out']=pygame.mixer.Sound('Sounds/out.wav')
+    sounds['flap']=pygame.mixer.Sound('Sounds/wing.wav')
+    pr= sprites['player'].get_rect(topleft=(0,350))
+
     while True:
-        welcomescreen() 
-        mainGame() 
+        welcomeScreen()
+        mainGame()
+
+
+
+    
